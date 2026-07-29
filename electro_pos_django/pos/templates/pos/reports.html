@@ -1,0 +1,102 @@
+{% extends "pos/base.html" %}
+{% block title %}التقارير · إلكترو POS{% endblock %}
+{% block content %}
+
+<div class="panel-header">
+  <div>
+    <span class="panel-badge">تحليلات</span>
+    <h1 class="panel-title">التقارير</h1>
+    <p class="panel-description">الإيرادات، الأرباح التقديرية، الأصناف الأكثر مبيعاً، وحركة الأموال حسب اليوم.</p>
+  </div>
+  <form method="get">
+    <select name="days" onchange="this.form.submit()">
+      <option value="1" {% if range_days == 1 %}selected{% endif %}>اليوم</option>
+      <option value="7" {% if range_days == 7 %}selected{% endif %}>آخر 7 أيام</option>
+      <option value="30" {% if range_days == 30 %}selected{% endif %}>آخر 30 يوم</option>
+      <option value="365" {% if range_days == 365 %}selected{% endif %}>آخر سنة</option>
+    </select>
+  </form>
+</div>
+
+<div class="panel-content">
+
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-value">{{ total_revenue|floatformat:2 }}</div>
+      <div class="stat-label">الإيرادات</div>
+      <div class="stat-sub">{{ sales_count }} عملية بيع</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">{{ total_profit|floatformat:2 }}</div>
+      <div class="stat-label">الربح التقديري</div>
+      <div class="stat-sub">سعر البيع ناقص سعر التكلفة</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value plain">{{ total_cash|floatformat:2 }}</div>
+      <div class="stat-label">مبيعات نقدية</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value plain">{{ total_installment|floatformat:2 }}</div>
+      <div class="stat-label">مبيعات بالتقسيط</div>
+      <div class="stat-sub">{{ outstanding_total|floatformat:2 }} إجمالي المستحق</div>
+    </div>
+  </div>
+
+  <div class="content-card">
+    <div class="card-header">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
+      </div>
+      <h3 class="card-title">الأصناف الأكثر مبيعاً</h3>
+    </div>
+    {% if best_sellers %}
+    <table>
+      <thead><tr><th>المنتج</th><th>الوحدات المباعة</th><th>الإيراد</th></tr></thead>
+      <tbody>
+        {% for b in best_sellers %}
+        <tr>
+          <td>{{ b.product_name }}</td>
+          <td class="mono">{{ b.units_sold }}</td>
+          <td class="mono">{{ b.revenue|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">لا توجد مبيعات في هذه الفترة بعد.</div>
+    {% endif %}
+  </div>
+
+  <div class="content-card">
+    <div class="card-header">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+      </div>
+      <h3 class="card-title">حركة الأموال حسب اليوم</h3>
+    </div>
+    {% if money_by_day %}
+    <table>
+      <thead><tr><th>اليوم</th><th>نقدي</th><th>تقسيط</th><th>الإجمالي</th></tr></thead>
+      <tbody>
+        {% for d in money_by_day %}
+        <tr>
+          <td class="mono" style="color:var(--text-faint);">{{ d.day }}</td>
+          <td class="mono">{{ d.cash|floatformat:2 }}</td>
+          <td class="mono">{{ d.installment|floatformat:2 }}</td>
+          <td class="mono">{{ d.revenue|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">لا توجد مبيعات في هذه الفترة بعد.</div>
+    {% endif %}
+  </div>
+
+</div>
+
+{% endblock %}

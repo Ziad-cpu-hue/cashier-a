@@ -1,0 +1,48 @@
+{% extends "pos/base.html" %}
+{% block title %}المخزون · إلكترو POS{% endblock %}
+{% block content %}
+
+<div class="panel-header">
+  <div>
+    <span class="panel-badge">التحكم بالمخزون</span>
+    <h1 class="panel-title">المخزون</h1>
+    <p class="panel-description">تابع حالة الكميات لكل صنف، وأعد التعبئة بضغطة واحدة عند الحاجة.</p>
+  </div>
+</div>
+
+<div class="panel-content">
+  <div class="content-card">
+    <table>
+      <thead>
+        <tr><th>المنتج</th><th>الفئة</th><th>الكمية الحالية</th><th>الحالة</th><th>إعادة تعبئة</th></tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+        <tr>
+          <td>{{ p.name }}</td>
+          <td><span class="badge badge-dim">{{ p.category }}</span></td>
+          <td class="mono">{{ p.quantity }}</td>
+          <td>
+            {% if p.quantity == 0 %}
+              <span class="badge badge-bad">نفد المخزون</span>
+            {% elif p.quantity <= p.low_stock_threshold %}
+              <span class="badge badge-accent">مخزون منخفض</span>
+            {% else %}
+              <span class="badge badge-good">جيد</span>
+            {% endif %}
+          </td>
+          <td>
+            <form method="post" action="{% url 'pos:restock' product_id=p.id %}" style="display:flex; gap:6px;">
+              {% csrf_token %}
+              <input type="number" name="amount" min="1" placeholder="الكمية" style="width:90px;">
+              <button type="submit" class="btn btn-sm btn-good">إضافة</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

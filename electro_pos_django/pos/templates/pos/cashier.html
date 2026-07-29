@@ -1,0 +1,103 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نقطة البيع · إلكترو POS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'pos/css/style.css' %}">
+<link rel="stylesheet" href="{% static 'pos/css/cashier.css' %}">
+</head>
+<body>
+{% csrf_token %}
+<div class="shell">
+<div class="main-container">
+  {% include "pos/_nav.html" %}
+
+  <div class="pos-shell">
+    <div class="pos-main">
+      <div class="pos-topbar">
+        <div class="pos-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="text" id="product-search" placeholder="ابحث عن منتج بالاسم أو امسح الباركود…" autofocus>
+        </div>
+      </div>
+
+      <div class="category-chips" id="category-chips"></div>
+      <div class="product-grid" id="product-grid"></div>
+    </div>
+
+    <div class="pos-ticket">
+      <div class="ticket-head">
+        <div class="invoice-label">عملية البيع الحالية</div>
+        <h2>فاتورة جديدة</h2>
+      </div>
+
+      <div class="ticket-items" id="ticket-items">
+        <div class="ticket-empty">السلة فارغة. اضغط على منتج لإضافته.</div>
+      </div>
+
+      <div class="ticket-foot">
+        <div id="cart-error"></div>
+
+        <div class="customer-select">
+          <label>العميل (اختياري للدفع النقدي، إلزامي للتقسيط)</label>
+          <div class="searchable-select" id="customer-picker">
+            <input type="text" id="customer-search-input" placeholder="عميل مباشر — ابحث بالاسم أو رقم الهاتف" autocomplete="off">
+            <div class="searchable-dropdown" id="customer-dropdown"></div>
+          </div>
+          <div id="new-customer-fields" style="display:none;">
+            <input type="text" id="new-customer-name" placeholder="اسم العميل" style="margin-bottom:8px;">
+            <input type="text" id="new-customer-phone" placeholder="رقم الهاتف">
+          </div>
+        </div>
+
+        <div class="pay-toggle">
+          <button type="button" id="pay-cash" class="active">نقدي</button>
+          <button type="button" id="pay-installment">تقسيط</button>
+        </div>
+
+        <div class="installment-box" id="installment-box">
+          <div class="field-row">
+            <div class="field" style="margin-bottom:0;">
+              <label>الدفعة المقدمة</label>
+              <input type="number" id="down-payment" min="0" value="0">
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <label>عدد الأشهر</label>
+              <input type="number" id="num-months" min="1" value="6">
+            </div>
+          </div>
+          <div class="installment-preview" id="installment-preview"></div>
+        </div>
+
+        <div class="field" style="margin-bottom:10px;">
+          <label>الخصم (جنيه)</label>
+          <input type="number" id="discount" min="0" value="0">
+        </div>
+
+        <div class="totals-row"><span>المجموع الفرعي</span><span class="mono" id="sum-subtotal">0.00</span></div>
+        <div class="totals-row"><span>الخصم</span><span class="mono" id="sum-discount">0.00</span></div>
+        <div class="totals-row grand">
+          <span>الإجمالي</span>
+          <span class="led-total mono" id="sum-total">0.00</span>
+        </div>
+
+        <button class="btn btn-primary btn-block" id="complete-sale" style="margin-top:14px;" disabled>إتمام عملية البيع</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const PRODUCTS = {{ products_json|safe }};
+const CUSTOMERS = {{ customers_json|safe }};
+const SALE_API_URL = "{% url 'pos:api_create_sale' %}";
+const INVOICE_URL_BASE = "{% url 'pos:invoice' sale_id=1 %}".replace(/1\/?$/, "");
+</script>
+<script src="{% static 'pos/js/cashier.js' %}"></script>
+</body>
+</html>

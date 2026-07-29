@@ -1,0 +1,86 @@
+{% extends "pos/base.html" %}
+{% block title %}التنبيهات · إلكترو POS{% endblock %}
+{% block content %}
+
+<div class="panel-header">
+  <div>
+    <span class="panel-badge">متابعة التحصيل والدفع</span>
+    <h1 class="panel-title">التنبيهات</h1>
+    <p class="panel-description">كل الأقساط المستحقة قريباً على العملاء، وكل أرباح المستثمرين المستحقة الدفع قريباً — مرتبة من الأقرب استحقاقاً.</p>
+  </div>
+</div>
+
+<div class="panel-content">
+
+  <h3 style="margin: 0 0 4px;">أقساط العملاء</h3>
+  <div class="content-card">
+    {% if plans %}
+    <table>
+      <thead>
+        <tr><th>العميل</th><th>الهاتف</th><th>القسط الشهري</th><th>المتبقي إجمالاً</th><th>موعد الاستحقاق</th><th>الحالة</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for plan in plans %}
+        <tr>
+          <td>{{ plan.customer.name }}</td>
+          <td class="mono" style="color:var(--text-faint);">{{ plan.customer.phone|default:"—" }}</td>
+          <td class="mono">{{ plan.monthly_amount|floatformat:2 }}</td>
+          <td class="mono">{{ plan.remaining_amount|floatformat:2 }}</td>
+          <td class="mono" style="color:var(--text-faint);">{{ plan.next_due_date|date:"Y-m-d" }}</td>
+          <td>
+            {% if plan.days_until_due < 0 %}
+              <span class="badge badge-bad">متأخر {{ plan.days_until_due|cut:"-" }} يوم</span>
+            {% elif plan.days_until_due == 0 %}
+              <span class="badge badge-bad">مستحق اليوم</span>
+            {% else %}
+              <span class="badge badge-accent">خلال {{ plan.days_until_due }} يوم</span>
+            {% endif %}
+          </td>
+          <td><a href="{% url 'pos:customer_detail' customer_id=plan.customer_id %}" class="btn btn-sm">فتح ملف العميل</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">لا توجد أقساط مستحقة قريباً.</div>
+    {% endif %}
+  </div>
+
+  <h3 style="margin: 26px 0 4px;">أرباح المستثمرين المستحقة</h3>
+  <div class="content-card">
+    {% if investors_due %}
+    <table>
+      <thead>
+        <tr><th>المستثمر</th><th>الهاتف</th><th>الأرباح المستحقة</th><th>موعد الدفع القادم</th><th>الحالة</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for inv in investors_due %}
+        <tr>
+          <td>{{ inv.name }}</td>
+          <td class="mono" style="color:var(--text-faint);">{{ inv.phone|default:"—" }}</td>
+          <td class="mono">{{ inv.dividends_due|floatformat:2 }}</td>
+          <td class="mono" style="color:var(--text-faint);">{{ inv.next_dividend_due_date|date:"Y-m-d" }}</td>
+          <td>
+            {% if inv.days_until_dividend_due < 0 %}
+              <span class="badge badge-bad">متأخر {{ inv.days_until_dividend_due|cut:"-" }} يوم</span>
+            {% elif inv.days_until_dividend_due == 0 %}
+              <span class="badge badge-bad">مستحق اليوم</span>
+            {% elif inv.days_until_dividend_due <= 5 %}
+              <span class="badge badge-accent">خلال {{ inv.days_until_dividend_due }} يوم</span>
+            {% else %}
+              <span class="badge badge-dim">خلال {{ inv.days_until_dividend_due }} يوم</span>
+            {% endif %}
+          </td>
+          <td><a href="{% url 'pos:investor_detail' investor_id=inv.id %}" class="btn btn-sm">فتح ملف المستثمر</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">لا توجد أرباح مستثمرين مستحقة الدفع حالياً.</div>
+    {% endif %}
+  </div>
+
+</div>
+
+{% endblock %}

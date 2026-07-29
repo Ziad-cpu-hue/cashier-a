@@ -1,0 +1,109 @@
+{% extends "pos/base.html" %}
+{% block title %}المصروفات · إلكترو POS{% endblock %}
+{% block content %}
+
+<div class="panel-header">
+  <div>
+    <span class="panel-badge">التكاليف التشغيلية</span>
+    <h1 class="panel-title">المصروفات</h1>
+    <p class="panel-description">الرواتب، الإيجار، الكهرباء، وكل تكلفة تشغيلية تُخصم من الأرباح قبل توزيعها على المستثمرين.</p>
+  </div>
+</div>
+
+<div class="panel-content">
+
+  <div class="stats-grid cols-3">
+    <div class="content-card" style="grid-column: span 2;">
+      <div class="card-header">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2H10a2 2 0 0 0-2 2v16"></path>
+          </svg>
+        </div>
+        <h3 class="card-title">تسجيل مصروف جديد</h3>
+      </div>
+      <form method="post" action="{% url 'pos:expense_new' %}">
+        {% csrf_token %}
+        <div class="field-row">
+          <div class="field">
+            <label>البند</label>
+            <select name="category">
+              <option value="salaries">رواتب</option>
+              <option value="electricity">كهرباء</option>
+              <option value="rent">إيجار</option>
+              <option value="transportation">مواصلات</option>
+              <option value="maintenance">صيانة</option>
+              <option value="taxes">ضرائب</option>
+              <option value="other">أخرى</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>المبلغ (جنيه)</label>
+            <input type="number" step="0.01" min="0.01" name="amount" required>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>التاريخ</label>
+            <input type="date" name="date">
+            <div class="hint">اتركه فارغاً لاستخدام تاريخ اليوم.</div>
+          </div>
+          <div class="field">
+            <label>ملاحظة</label>
+            <input type="text" name="note" placeholder="اختياري">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">تسجيل المصروف</button>
+      </form>
+    </div>
+
+    <div class="content-card">
+      <div class="card-header">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+        </div>
+        <h3 class="card-title">هذا الشهر</h3>
+      </div>
+      <div style="font-family:var(--font-mono); direction:ltr; font-size:28px; font-weight:800; color:var(--bad);">{{ this_month_total|floatformat:2 }}</div>
+      <div class="hint">إجمالي المصروفات منذ بداية الشهر الحالي</div>
+      {% if by_category %}
+      <ul class="feature-list" style="margin-top:14px;">
+        {% for c in by_category %}
+        <li><span>{{ c.category }}</span><span class="mono">{{ c.total|floatformat:2 }}</span></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="content-card">
+    {% if expenses %}
+    <table>
+      <thead><tr><th>التاريخ</th><th>البند</th><th>المبلغ</th><th>ملاحظة</th><th></th></tr></thead>
+      <tbody>
+        {% for e in expenses %}
+        <tr>
+          <td class="mono" style="color:var(--text-faint);">{{ e.date|date:"Y-m-d" }}</td>
+          <td><span class="badge badge-dim">{{ e.get_category_display }}</span></td>
+          <td class="mono">{{ e.amount|floatformat:2 }}</td>
+          <td>{{ e.note|default:"—" }}</td>
+          <td>
+            <form method="post" action="{% url 'pos:expense_delete' expense_id=e.id %}" data-confirm="حذف هذا المصروف؟" data-confirm-label="حذف">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-danger">حذف</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">لا توجد مصروفات مسجّلة بعد.</div>
+    {% endif %}
+  </div>
+
+</div>
+
+{% endblock %}

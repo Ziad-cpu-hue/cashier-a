@@ -1,0 +1,181 @@
+{% extends "pos/base.html" %}
+{% block title %}لوحة التحكم · إلكترو POS{% endblock %}
+{% block content %}
+
+<div class="panel-header">
+  <div>
+    <span class="panel-badge">نظرة عامة</span>
+    <h1 class="panel-title">لوحة التحكم</h1>
+    <p class="panel-description">أهلاً بعودتك! هذه لمحة سريعة عن أداء متجرك اليوم وأهم الأرقام التي تحتاج لمتابعتها.</p>
+  </div>
+  <a href="{% url 'pos:cashier' %}" class="btn btn-primary">فتح شاشة نقطة البيع</a>
+</div>
+
+<div class="panel-content">
+
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-value">{{ today_sales.c }}</div>
+      <div class="stat-label">مبيعات اليوم</div>
+      <div class="stat-sub">{{ today_sales.t|floatformat:2 }} ج.م محصّلة</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">{{ product_count }}</div>
+      <div class="stat-label">إجمالي المنتجات</div>
+      <div class="stat-sub">{{ low_stock|length }} صنف منخفض المخزون</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">{{ customer_count }}</div>
+      <div class="stat-label">العملاء المسجّلون</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value danger">{{ outstanding|floatformat:2 }}</div>
+      <div class="stat-label">أقساط مستحقة</div>
+      <div class="stat-sub">جنيه لم يتم تحصيلها بعد</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value plain">{{ total_capital|floatformat:2 }}</div>
+      <div class="stat-label">رأس مال المستثمرين</div>
+      <div class="stat-sub">{{ investor_count }} مستثمر نشط</div>
+    </div>
+  </div>
+
+  <div class="content-card">
+    <div class="card-header">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline>
+        </svg>
+      </div>
+      <h3 class="card-title">صحة المخزون</h3>
+    </div>
+    <p class="card-text">
+      {{ stock_health_pct }}٪ من أصنافك في مستوى مخزون جيد حالياً.
+      {% if low_stock %}يوجد {{ low_stock|length }} صنف يحتاج إعادة تعبئة قريباً — راجع تفاصيلها أدناه.{% else %}لا توجد أصناف تحتاج إعادة تعبئة حالياً.{% endif %}
+    </p>
+    <div class="progress-bar-container">
+      <div class="progress-label"><span>نسبة الأصناف السليمة</span><span>{{ stock_health_pct }}٪</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width: {{ stock_health_pct }}%"></div></div>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-label"><span>نسبة تحصيل الأقساط</span><span>{{ collection_pct }}٪</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width: {{ collection_pct }}%"></div></div>
+    </div>
+  </div>
+
+  <div class="content-card">
+    <div class="card-header">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+      </div>
+      <h3 class="card-title">تنبيهات الأقساط القادمة</h3>
+    </div>
+    {% if due_alerts %}
+    <ul class="feature-list">
+      {% for plan in due_alerts|slice:":6" %}
+      <li>
+        <span>{{ plan.customer.name }} <span style="color:var(--text-faint); font-size:11.5px;">· {{ plan.monthly_amount|floatformat:2 }} ج.م</span></span>
+        {% if plan.days_until_due < 0 %}
+          <span class="badge badge-bad">متأخر {{ plan.days_until_due|cut:"-" }} يوم</span>
+        {% elif plan.days_until_due == 0 %}
+          <span class="badge badge-bad">مستحق اليوم</span>
+        {% else %}
+          <span class="badge badge-accent">خلال {{ plan.days_until_due }} يوم</span>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% if due_alerts|length > 6 %}
+    <p class="card-text" style="margin-top:12px;"><a href="{% url 'pos:alerts_list' %}" style="color:#c4b5fd;">عرض كل التنبيهات ({{ due_alerts|length }}) ←</a></p>
+    {% endif %}
+    {% else %}
+    <p class="card-text">لا توجد أقساط مستحقة خلال الأيام القادمة.</p>
+    {% endif %}
+  </div>
+
+  <div class="content-card">
+    <div class="card-header">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+      </div>
+      <h3 class="card-title">تنبيهات دفعات المستثمرين</h3>
+    </div>
+    {% if investor_alerts %}
+    <ul class="feature-list">
+      {% for inv in investor_alerts|slice:":6" %}
+      <li>
+        <span>{{ inv.name }} <span style="color:var(--text-faint); font-size:11.5px;">· {{ inv.dividends_due|floatformat:2 }} ج.م مستحقة</span></span>
+        {% if inv.days_until_dividend_due < 0 %}
+          <span class="badge badge-bad">متأخر {{ inv.days_until_dividend_due|cut:"-" }} يوم</span>
+        {% elif inv.days_until_dividend_due == 0 %}
+          <span class="badge badge-bad">مستحق اليوم</span>
+        {% else %}
+          <span class="badge badge-accent">خلال {{ inv.days_until_dividend_due }} يوم</span>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="card-text">لا توجد دفعات أرباح مستحقة لمستثمرين خلال الأيام القادمة.</p>
+    {% endif %}
+  </div>
+
+  <div class="content-card">
+    <div class="card-header">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+      </div>
+      <h3 class="card-title">تنبيهات المخزون المنخفض</h3>
+    </div>
+    {% if low_stock %}
+    <ul class="feature-list">
+      {% for p in low_stock|slice:":6" %}
+      <li>
+        <span>{{ p.name }}</span>
+        <span class="badge {% if p.quantity == 0 %}badge-bad{% else %}badge-accent{% endif %}">{{ p.quantity }} متبقي</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="card-text">جميع الأصناف في مستوى مخزون جيد. لا حاجة لأي إجراء الآن.</p>
+    {% endif %}
+  </div>
+
+  <div class="content-card">
+    <div class="card-header">
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18l-1.5 9h-15z"></path><circle cx="9" cy="20" r="1.2"></circle><circle cx="17" cy="20" r="1.2"></circle>
+        </svg>
+      </div>
+      <h3 class="card-title">أحدث المبيعات</h3>
+    </div>
+    {% if recent_sales %}
+    <table>
+      <thead><tr><th>الفاتورة</th><th>العميل</th><th>طريقة الدفع</th><th>الإجمالي</th></tr></thead>
+      <tbody>
+        {% for s in recent_sales %}
+        <tr>
+          <td><a href="{% url 'pos:invoice' sale_id=s.id %}" class="mono">{{ s.invoice_number }}</a></td>
+          <td>{{ s.customer.name|default:"عميل مباشر" }}</td>
+          <td><span class="badge {% if s.payment_method == 'installment' %}badge-info{% else %}badge-good{% endif %}">{% if s.payment_method == 'installment' %}تقسيط{% else %}نقدي{% endif %}</span></td>
+          <td class="mono">{{ s.total|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">لا توجد مبيعات مسجّلة بعد — توجه إلى شاشة نقطة البيع لإتمام أول عملية بيع.</div>
+    {% endif %}
+  </div>
+
+</div>
+
+{% endblock %}

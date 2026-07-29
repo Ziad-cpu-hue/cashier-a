@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>فاتورة {{ sale.invoice_number }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Tajawal', sans-serif;
+    background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+    color: #fff;
+    margin: 0;
+    padding: 40px 20px;
+  }
+  .sheet {
+    max-width: 640px;
+    margin: 0 auto;
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 36px;
+  }
+  .head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 26px; }
+  .head h1 { font-weight: 800; margin: 0; font-size: 22px; }
+  .head .accent {
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .invoice-meta { text-align:left; font-family:'JetBrains Mono', monospace; direction: ltr; font-size: 13px; color:rgba(255,255,255,0.5); }
+  .invoice-meta .num { color:#c4b5fd; font-size:16px; font-weight:700; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th { text-align:right; font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:rgba(255,255,255,0.35); padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  td { padding: 10px 4px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 14px; }
+  .mono { font-family:'JetBrains Mono', monospace; direction: ltr; unicode-bidi: isolate; }
+  .totals { margin-top: 16px; margin-right: auto; width: 280px; }
+  .totals div { display:flex; justify-content:space-between; font-size: 14px; padding: 4px 0; color:rgba(255,255,255,0.5); }
+  .totals .grand {
+    font-size: 20px; font-family:'JetBrains Mono', monospace; font-weight:700;
+    border-top: 1px dashed rgba(255,255,255,0.15); margin-top:8px; padding-top:10px;
+    background: linear-gradient(135deg, #6366f1, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .badge {
+    display:inline-block; padding:3px 12px; border-radius:100px; font-size:11px; font-weight:700;
+    background:linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2)); color:#c4b5fd;
+  }
+  .footnote { margin-top: 26px; font-size: 12px; color:rgba(255,255,255,0.35); text-align:center; }
+  .print-btn {
+    display:block; margin: 20px auto 0; padding: 11px 22px; border-radius: 10px;
+    background: linear-gradient(135deg,#6366f1,#a855f7); border:none; color:#fff;
+    font-weight:700; cursor:pointer; font-size:14px; font-family:'Tajawal',sans-serif;
+  }
+  @media print {
+    body { background: #fff; color:#000; padding:0; }
+    .sheet { border: none; background:#fff; color:#000; backdrop-filter:none; }
+    .print-btn { display:none; }
+    th, td { color:#000 !important; border-color:#ccc !important; }
+    .head .accent, .totals .grand, .invoice-meta .num, .badge { color:#000 !important; -webkit-text-fill-color:#000 !important; background:none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="head">
+      <div>
+        <h1>إلكترو<span class="accent">POS</span></h1>
+        <div style="color:rgba(255,255,255,0.5); font-size:13px; margin-top:4px;">متجر الأجهزة الكهربائية</div>
+      </div>
+      <div class="invoice-meta">
+        <div class="num">{{ sale.invoice_number }}</div>
+        <div>{{ sale.sale_date|date:"Y-m-d H:i" }}</div>
+        <div style="margin-top:6px;"><span class="badge">{% if sale.payment_method == 'installment' %}تقسيط{% else %}نقدي{% endif %}</span></div>
+      </div>
+    </div>
+
+    {% if customer %}
+    <div style="font-size:14px; color:rgba(255,255,255,0.5);">
+      الفاتورة باسم: <strong style="color:#fff;">{{ customer.name }}</strong>
+      {% if customer.phone %} &middot; <span class="mono">{{ customer.phone }}</span>{% endif %}
+    </div>
+    {% endif %}
+
+    <table>
+      <thead>
+        <tr><th>الصنف</th><th>الرقم التسلسلي</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td>{{ item.product_name }}</td>
+          <td class="mono" style="color:rgba(255,255,255,0.35);">{{ item.serial_number|default:"—" }}</td>
+          <td class="mono">{{ item.quantity }}</td>
+          <td class="mono">{{ item.unit_price|floatformat:2 }}</td>
+          <td class="mono">{{ item.line_total|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="totals">
+      <div><span>المجموع الفرعي</span><span class="mono">{{ sale.subtotal|floatformat:2 }}</span></div>
+      <div><span>الخصم</span><span class="mono">-{{ sale.discount|floatformat:2 }}</span></div>
+      <div class="grand"><span>الإجمالي</span><span>{{ sale.total|floatformat:2 }} ج.م</span></div>
+      {% if sale.payment_method == 'installment' and plan %}
+      <div style="margin-top:10px;"><span>الدفعة المقدمة</span><span class="mono">{{ plan.down_payment|floatformat:2 }}</span></div>
+      <div><span>المتبقي</span><span class="mono">{{ plan.remaining_amount|floatformat:2 }}</span></div>
+      <div><span>القسط الشهري ({{ plan.num_months }} شهر)</span><span class="mono">{{ plan.monthly_amount|floatformat:2 }}</span></div>
+      {% endif %}
+    </div>
+
+    <div class="footnote">شكراً لتعاملكم معنا. يُرجى الاحتفاظ بهذه الفاتورة لأي مطالبة بالضمان.</div>
+    <button class="print-btn" onclick="window.print()">طباعة الفاتورة</button>
+  </div>
+</body>
+</html>

@@ -1,0 +1,80 @@
+{% extends "pos/base.html" %}
+{% load static %}
+{% block title %}المنتجات · إلكترو POS{% endblock %}
+{% block content %}
+
+<div class="panel-header">
+  <div>
+    <span class="panel-badge">الكتالوج</span>
+    <h1 class="panel-title">المنتجات</h1>
+    <p class="panel-description">إدارة كل الأجهزة الكهربائية المعروضة في متجرك: الاسم، الباركود، السعر، والضمان.</p>
+  </div>
+  <a href="{% url 'pos:product_new' %}" class="btn btn-primary">+ إضافة منتج</a>
+</div>
+
+<div class="panel-content">
+  <div class="content-card">
+    <div class="search-box" id="products-search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="text" id="products-search-input" placeholder="ابحث بالاسم أو الباركود…" autocomplete="off">
+      <div class="clear-btn">&times;</div>
+    </div>
+    {% if products %}<div class="search-hint">يعرض <strong>{{ products|length }}</strong> منتج — النتائج تُفلتر أثناء الكتابة.</div>{% endif %}
+  </div>
+
+  <div class="content-card">
+    {% if products %}
+    <table>
+      <thead>
+        <tr>
+          <th>الاسم</th><th>الفئة</th><th>الباركود</th><th>السعر</th><th>التكلفة</th>
+          <th>المخزون</th><th>الضمان</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="products-table-body">
+        {% for p in products %}
+        <tr data-search="{{ p.name }} {{ p.barcode|default:'' }}">
+          <td>{{ p.name }}</td>
+          <td><span class="badge badge-dim">{{ p.category }}</span></td>
+          <td class="mono" style="color:var(--text-faint);">{{ p.barcode|default:"—" }}</td>
+          <td class="mono">{{ p.price|floatformat:2 }}</td>
+          <td class="mono" style="color:var(--text-faint);">{{ p.cost_price|floatformat:2 }}</td>
+          <td>
+            {% if p.quantity == 0 %}
+              <span class="badge badge-bad">نفد</span>
+            {% elif p.quantity <= p.low_stock_threshold %}
+              <span class="badge badge-accent">{{ p.quantity }} متبقي</span>
+            {% else %}
+              <span class="badge badge-good">{{ p.quantity }} متوفر</span>
+            {% endif %}
+          </td>
+          <td class="mono" style="color:var(--text-faint);">{{ p.warranty_months }} شهر</td>
+          <td style="white-space:nowrap;">
+            <a href="{% url 'pos:product_edit' product_id=p.id %}" class="btn btn-sm">تعديل</a>
+            <form method="post" action="{% url 'pos:product_delete' product_id=p.id %}" style="display:inline;" data-confirm="حذف {{ p.name }}؟ لا يمكن التراجع عن هذا الإجراء." data-confirm-label="حذف">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-danger">حذف</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="empty" id="products-empty" style="display:none;">لا توجد منتجات مطابقة لبحثك.</div>
+    {% else %}
+    <div class="empty">لا توجد منتجات بعد. ابدأ بإضافة أول منتج.</div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'pos/js/list-search.js' %}"></script>
+<script>
+  initLiveSearch({
+    inputId: "products-search-input",
+    rowSelector: "#products-table-body tr",
+    emptyId: "products-empty",
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "pos/base.html" %}
+{% block title %}{% if product %}تعديل{% else %}إضافة{% endif %} منتج · إلكترو POS{% endblock %}
+{% block content %}
+
+<div class="panel-header">
+  <div>
+    <span class="panel-badge">الكتالوج</span>
+    <h1 class="panel-title">{% if product %}تعديل المنتج{% else %}إضافة منتج جديد{% endif %}</h1>
+    <p class="panel-description">أدخل بيانات الجهاز بدقة — السعر والتكلفة تدخلان مباشرة في تقارير الأرباح.</p>
+  </div>
+  <a href="{% url 'pos:products_list' %}" class="btn">→ العودة إلى المنتجات</a>
+</div>
+
+<div class="content-card" style="max-width:640px;">
+  <form method="post">
+    {% csrf_token %}
+    <div class="field">
+      <label>اسم المنتج</label>
+      <input type="text" name="name" required value="{{ product.name|default:'' }}" placeholder="مثال: ثلاجة 18 قدم نو فروست">
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>الفئة</label>
+        <input type="text" name="category" value="{{ product.category|default:'عام' }}">
+      </div>
+      <div class="field">
+        <label>الباركود</label>
+        <input type="text" name="barcode" value="{{ product.barcode|default:'' }}" placeholder="اختياري">
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>سعر البيع (جنيه)</label>
+        <input type="number" step="0.01" min="0" name="price" required value="{{ product.price|default:'' }}">
+      </div>
+      <div class="field">
+        <label>سعر التكلفة (جنيه)</label>
+        <input type="number" step="0.01" min="0" name="cost_price" value="{{ product.cost_price|default:0 }}">
+        <div class="hint">يُستخدم لحساب الربح في التقارير.</div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>الكمية المتوفرة</label>
+        <input type="number" min="0" name="quantity" value="{{ product.quantity|default:0 }}">
+      </div>
+      <div class="field">
+        <label>حد التنبيه لانخفاض المخزون</label>
+        <input type="number" min="0" name="low_stock_threshold" value="{{ product.low_stock_threshold|default:3 }}">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>مدة الضمان (بالأشهر)</label>
+      <input type="number" min="0" name="warranty_months" value="{{ product.warranty_months|default:12 }}">
+      <div class="hint">تُطبَّق تلقائياً عند تسجيل رقم تسلسلي أثناء عملية البيع.</div>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-block">{% if product %}حفظ التعديلات{% else %}إضافة المنتج{% endif %}</button>
+  </form>
+</div>
+
+{% endblock %}

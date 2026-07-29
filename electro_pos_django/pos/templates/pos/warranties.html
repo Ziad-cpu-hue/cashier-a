@@ -1,0 +1,66 @@
+{% extends "pos/base.html" %}
+{% load static %}
+{% block title %}الضمانات · إلكترو POS{% endblock %}
+{% block content %}
+
+<div class="panel-header">
+  <div>
+    <span class="panel-badge">سجل الصيانة</span>
+    <h1 class="panel-title">سجل الضمانات</h1>
+    <p class="panel-description">كل رقم تسلسلي يُدخل عند البيع يُسجَّل هنا تلقائياً مع تاريخ بداية ونهاية الضمان.</p>
+  </div>
+</div>
+
+<div class="panel-content">
+  <div class="content-card">
+    <div class="search-box" id="warranties-search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="text" id="warranties-search-input" placeholder="ابحث بالرقم التسلسلي أو اسم المنتج…" autocomplete="off">
+      <div class="clear-btn">&times;</div>
+    </div>
+    {% if warranties %}<div class="search-hint">يعرض <strong>{{ warranties|length }}</strong> ضمان — النتائج تُفلتر أثناء الكتابة.</div>{% endif %}
+  </div>
+
+  <div class="content-card">
+    {% if warranties %}
+    <table>
+      <thead>
+        <tr><th>المنتج</th><th>الرقم التسلسلي</th><th>العميل</th><th>البداية</th><th>النهاية</th><th>الحالة</th></tr>
+      </thead>
+      <tbody id="warranties-table-body">
+        {% for w in warranties %}
+        <tr data-search="{{ w.product_name }} {{ w.serial_number }} {{ w.customer.name|default:'' }}">
+          <td>{{ w.product_name }}</td>
+          <td class="mono">{{ w.serial_number }}</td>
+          <td>{{ w.customer.name|default:"—" }} {% if w.customer.phone %}<span style="color:var(--text-faint);">· {{ w.customer.phone }}</span>{% endif %}</td>
+          <td class="mono" style="color:var(--text-faint);">{{ w.start_date|date:"Y-m-d" }}</td>
+          <td class="mono" style="color:var(--text-faint);">{{ w.end_date|date:"Y-m-d" }}</td>
+          <td>
+            {% if w.is_active %}
+              <span class="badge badge-good">سارٍ</span>
+            {% else %}
+              <span class="badge badge-bad">منتهٍ</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="empty" id="warranties-empty" style="display:none;">لا توجد ضمانات مطابقة لبحثك.</div>
+    {% else %}
+    <div class="empty">لا توجد ضمانات مسجّلة. تظهر هنا تلقائياً عند إدخال رقم تسلسلي في شاشة نقطة البيع.</div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'pos/js/list-search.js' %}"></script>
+<script>
+  initLiveSearch({
+    inputId: "warranties-search-input",
+    rowSelector: "#warranties-table-body tr",
+    emptyId: "warranties-empty",
+  });
+</script>
+{% endblock %}

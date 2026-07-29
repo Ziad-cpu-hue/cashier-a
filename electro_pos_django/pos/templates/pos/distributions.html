@@ -1,0 +1,44 @@
+{% extends "pos/base.html" %}
+{% block title %}توزيعات الأرباح · إلكترو POS{% endblock %}
+{% block content %}
+
+<div class="panel-header">
+  <div>
+    <span class="panel-badge">الأرباح الدورية</span>
+    <h1 class="panel-title">توزيعات الأرباح</h1>
+    <p class="panel-description">كل توزيع يحسب صافي الربح أو الخسارة لفترة محددة (الإيرادات ناقص تكلفة البضاعة ناقص المصروفات)، ثم يقسمه على المستثمرين حسب نسبة ملكيتهم.</p>
+  </div>
+  <a href="{% url 'pos:distribution_new' %}" class="btn btn-primary">+ توزيع جديد</a>
+</div>
+
+<div class="panel-content">
+  <div class="content-card">
+    {% if distributions %}
+    <table>
+      <thead><tr><th>الفترة</th><th>الإيرادات</th><th>تكلفة البضاعة</th><th>المصروفات</th><th>صافي الربح/الخسارة</th><th></th></tr></thead>
+      <tbody>
+        {% for d in distributions %}
+        <tr>
+          <td class="mono" style="color:var(--text-faint);">{{ d.period_start|date:"Y-m-d" }} → {{ d.period_end|date:"Y-m-d" }}</td>
+          <td class="mono">{{ d.total_revenue|floatformat:2 }}</td>
+          <td class="mono">{{ d.total_cogs|floatformat:2 }}</td>
+          <td class="mono">{{ d.total_expenses|floatformat:2 }}</td>
+          <td class="mono">
+            {% if d.is_loss %}
+              <span class="badge badge-bad">خسارة {{ d.net_profit|floatformat:2|cut:"-" }}</span>
+            {% else %}
+              <span class="badge badge-good">ربح {{ d.net_profit|floatformat:2 }}</span>
+            {% endif %}
+          </td>
+          <td><a href="{% url 'pos:distribution_detail' distribution_id=d.id %}" class="btn btn-sm">التفاصيل</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">لا توجد توزيعات أرباح بعد. أنشئ أول توزيع لفترة محددة.</div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

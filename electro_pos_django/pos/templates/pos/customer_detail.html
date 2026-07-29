@@ -1,0 +1,161 @@
+{% extends "pos/base.html" %}
+{% block title %}{{ customer.name }} · إلكترو POS{% endblock %}
+{% block content %}
+
+<div class="panel-header">
+  <div>
+    <span class="panel-badge">ملف العميل</span>
+    <h1 class="panel-title">{{ customer.name }}</h1>
+    <p class="panel-description">سجل المشتريات، خطط الأقساط، والضمانات المسجّلة لهذا العميل.</p>
+  </div>
+  <div style="text-align:end;">
+    <div style="display:flex; gap:10px;">
+      <a href="{% url 'pos:customers_list' %}" class="btn">→ كل العملاء</a>
+      <form method="post" action="{% url 'pos:customer_delete' customer_id=customer.id %}" data-confirm="حذف العميل {{ customer.name }} نهائياً؟ لا يمكن التراجع عن هذا الإجراء." data-confirm-label="حذف">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">حذف العميل</button>
+      </form>
+    </div>
+    {% if active_due > 0 %}
+    <div class="hint" style="margin-top:6px;">لا يمكن الحذف قبل تحصيل القسط النشط ({{ active_due|floatformat:2 }} ج.م).</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="panel-content">
+
+  <div class="stats-grid cols-3">
+    <div class="stat-item">
+      <div class="stat-value plain mono">{{ customer.phone|default:"—" }}</div>
+      <div class="stat-label">رقم الهاتف</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">{{ sales|length }}</div>
+      <div class="stat-label">إجمالي المشتريات</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value {% if active_due > 0 %}danger{% endif %}">{{ active_due|floatformat:2 }}</div>
+      <div class="stat-label">رصيد الأقساط النشطة</div>
+    </div>
+  </div>
+
+  <div class="divider-trace"></div>
+
+  <h3 style="margin: 0 0 4px;">خطط الأقساط</h3>
+  {% if plans %}
+    {% for plan in plans %}
+    <div class="content-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+          <div style="font-size:12.5px; color:var(--text-faint);">خطة رقم {{ plan.id }} &middot; بدأت في {{ plan.start_date|date:"Y-m-d" }}</div>
+          <div style="font-family:var(--font-mono); direction:ltr; font-size:19px; margin-top:4px; display:inline-block;">
+            {{ plan.remaining_amount|floatformat:2 }} <span style="font-family:var(--font-body); direction:rtl;">ج.م متبقية</span>
+            <span style="color:var(--text-faint); font-size:12.5px;"> من أصل {{ plan.total_amount|floatformat:2 }}</span>
+          </div>
+        </div>
+        <span class="badge {% if plan.status == 'closed' %}badge-good{% else %}badge-accent{% endif %}">{% if plan.status == 'closed' %}مسددة{% else %}نشطة{% endif %}</span>
+      </div>
+
+      {% if plan.status == 'active' and plan.next_due_date %}
+      <div style="margin-top:10px;">
+        {% if plan.days_until_due < 0 %}
+          <span class="badge badge-bad">القسط القادم متأخر {{ plan.days_until_due|cut:"-" }} يوم — تاريخه {{ plan.next_due_date|date:"Y-m-d" }}</span>
+        {% elif plan.days_until_due == 0 %}
+          <span class="badge badge-bad">القسط القادم مستحق اليوم</span>
+        {% elif plan.days_until_due <= 5 %}
+          <span class="badge badge-accent">القسط القادم خلال {{ plan.days_until_due }} يوم — تاريخه {{ plan.next_due_date|date:"Y-m-d" }}</span>
+        {% else %}
+          <span class="badge badge-dim">القسط القادم في {{ plan.next_due_date|date:"Y-m-d" }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <div class="stats-grid cols-3" style="margin-top:14px;">
+        <div class="stat-item"><div class="stat-value plain" style="font-size:16px;">{{ plan.down_payment|floatformat:2 }}</div><div class="stat-label">الدفعة المقدمة</div></div>
+        <div class="stat-item"><div class="stat-value plain" style="font-size:16px;">{{ plan.monthly_amount|floatformat:2 }}</div><div class="stat-label">القسط الشهري</div></div>
+        <div class="stat-item"><div class="stat-value plain" style="font-size:16px;">{{ plan.num_months }}</div><div class="stat-label">عدد الأشهر</div></div>
+      </div>
+
+      {% if plan.status == 'active' %}
+      <form method="post" action="{% url 'pos:installment_pay' plan_id=plan.id %}" style="margin-top:14px; display:flex; gap:10px; align-items:flex-end;">
+        {% csrf_token %}
+        <div class="field" style="margin-bottom:0; flex:1;">
+          <label>تسجيل دفعة (جنيه)</label>
+          <input type="number" step="0.01" min="0.01" max="{{ plan.remaining_amount }}" name="amount" required>
+        </div>
+        <div class="field" style="margin-bottom:0; flex:1;">
+          <label>ملاحظة</label>
+          <input type="text" name="note" placeholder="اختياري">
+        </div>
+        <button type="submit" class="btn btn-good">تسجيل الدفعة</button>
+      </form>
+      {% endif %}
+
+      {% with payments=plan.payments.all %}
+      {% if payments %}
+      <table style="margin-top:14px;">
+        <thead><tr><th>التاريخ</th><th>المبلغ</th><th>ملاحظة</th><th></th></tr></thead>
+        <tbody>
+          {% for pay in payments %}
+          <tr>
+            <td class="mono" style="color:var(--text-faint);">{{ pay.payment_date|date:"Y-m-d H:i" }}</td>
+            <td class="mono">{{ pay.amount|floatformat:2 }}</td>
+            <td>{{ pay.note|default:"—" }}</td>
+            <td><a href="{% url 'pos:installment_payment_receipt' payment_id=pay.id %}" class="btn btn-sm">عرض الإيصال</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% endwith %}
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="content-card"><div class="empty">لا توجد خطط أقساط لهذا العميل.</div></div>
+  {% endif %}
+
+  <h3 style="margin: 26px 0 4px;">سجل المشتريات</h3>
+  <div class="content-card">
+    {% if sales %}
+    <table>
+      <thead><tr><th>الفاتورة</th><th>التاريخ</th><th>طريقة الدفع</th><th>الإجمالي</th><th></th></tr></thead>
+      <tbody>
+        {% for s in sales %}
+        <tr>
+          <td class="mono">{{ s.invoice_number }}</td>
+          <td class="mono" style="color:var(--text-faint);">{{ s.sale_date|date:"Y-m-d" }}</td>
+          <td><span class="badge {% if s.payment_method == 'installment' %}badge-info{% else %}badge-good{% endif %}">{% if s.payment_method == 'installment' %}تقسيط{% else %}نقدي{% endif %}</span></td>
+          <td class="mono">{{ s.total|floatformat:2 }}</td>
+          <td><a href="{% url 'pos:invoice' sale_id=s.id %}" class="btn btn-sm">عرض</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">لا توجد مشتريات بعد.</div>
+    {% endif %}
+  </div>
+
+  <h3 style="margin: 26px 0 4px;">الضمانات المسجّلة</h3>
+  <div class="content-card">
+    {% if warranties %}
+    <table>
+      <thead><tr><th>المنتج</th><th>الرقم التسلسلي</th><th>تاريخ الانتهاء</th></tr></thead>
+      <tbody>
+        {% for w in warranties %}
+        <tr>
+          <td>{{ w.product_name }}</td>
+          <td class="mono">{{ w.serial_number }}</td>
+          <td class="mono" style="color:var(--text-faint);">{{ w.end_date|date:"Y-m-d" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">لا توجد ضمانات مسجّلة لهذا العميل.</div>
+    {% endif %}
+  </div>
+
+</div>
+
+{% endblock %}

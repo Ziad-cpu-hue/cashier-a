@@ -1,0 +1,71 @@
+{% extends "pos/base.html" %}
+{% block title %}تفاصيل التوزيع · إلكترو POS{% endblock %}
+{% block content %}
+
+<div class="panel-header">
+  <div>
+    <span class="panel-badge">سجل توزيع</span>
+    <h1 class="panel-title">{{ distribution.period_start|date:"Y-m-d" }} → {{ distribution.period_end|date:"Y-m-d" }}</h1>
+    <p class="panel-description">{% if distribution.note %}{{ distribution.note }}{% else %}تفاصيل حساب صافي الربح وتوزيعه على المستثمرين لهذه الفترة.{% endif %}</p>
+  </div>
+  <a href="{% url 'pos:distributions_list' %}" class="btn">→ كل التوزيعات</a>
+</div>
+
+<div class="panel-content">
+
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-value plain">{{ distribution.total_revenue|floatformat:2 }}</div>
+      <div class="stat-label">الإيرادات</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value plain">{{ distribution.total_cogs|floatformat:2 }}</div>
+      <div class="stat-label">تكلفة البضاعة</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value plain">{{ distribution.total_expenses|floatformat:2 }}</div>
+      <div class="stat-label">المصروفات التشغيلية</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value {% if distribution.is_loss %}danger{% else %}good{% endif %}">{{ distribution.net_profit|floatformat:2 }}</div>
+      <div class="stat-label">{% if distribution.is_loss %}صافي الخسارة{% else %}صافي الربح{% endif %}</div>
+    </div>
+  </div>
+
+  {% if distribution.is_loss and distribution.loss_policy %}
+  <div class="content-card">
+    <span class="badge badge-bad">سياسة الخسارة المطبَّقة: {{ distribution.get_loss_policy_display }}</span>
+  </div>
+  {% endif %}
+
+  <div class="content-card">
+    <h3 style="margin-bottom:14px;">نصيب كل مستثمر</h3>
+    {% if shares %}
+    <table>
+      <thead><tr><th>المستثمر</th><th>نسبة الملكية</th><th>النصيب</th><th>رأس المال قبل</th><th>رأس المال بعد</th></tr></thead>
+      <tbody>
+        {% for s in shares %}
+        <tr>
+          <td>
+            {% if s.investor %}
+              <a href="{% url 'pos:investor_detail' investor_id=s.investor.id %}">{{ s.display_name }}</a>
+            {% else %}
+              {{ s.display_name }} <span class="badge badge-dim">محذوف</span>
+            {% endif %}
+          </td>
+          <td class="mono">{{ s.ownership_percentage_snapshot|floatformat:1 }}٪</td>
+          <td class="mono" style="color:{% if s.share_amount >= 0 %}var(--good){% else %}var(--bad){% endif %};">{{ s.share_amount|floatformat:2 }}</td>
+          <td class="mono" style="color:var(--text-faint);">{{ s.capital_before|floatformat:2 }}</td>
+          <td class="mono" style="color:var(--text-faint);">{{ s.capital_after|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">لم يتأثر أي مستثمر بهذا التوزيع {% if distribution.is_loss %}— تم تحميل الخسارة بالكامل على صاحب المشروع.{% endif %}</div>
+    {% endif %}
+  </div>
+
+</div>
+
+{% endblock %}

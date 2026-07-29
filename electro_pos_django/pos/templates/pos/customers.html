@@ -1,0 +1,114 @@
+{% extends "pos/base.html" %}
+{% load static %}
+{% block title %}العملاء · إلكترو POS{% endblock %}
+{% block content %}
+
+<div class="panel-header">
+  <div>
+    <span class="panel-badge">علاقات العملاء</span>
+    <h1 class="panel-title">العملاء</h1>
+    <p class="panel-description">سجل بيانات العملاء وتابع أرصدة الأقساط المستحقة عليهم.</p>
+  </div>
+</div>
+
+<div class="panel-content">
+  <div class="stats-grid cols-3">
+    <div class="content-card" style="grid-column: span 2;">
+      <div class="card-header">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <h3 class="card-title">إضافة عميل جديد</h3>
+      </div>
+      <form method="post" action="{% url 'pos:customer_new' %}">
+        {% csrf_token %}
+        <div class="field">
+          <label>الاسم</label>
+          <input type="text" name="name" required placeholder="الاسم بالكامل">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>رقم الهاتف</label>
+            <input type="text" name="phone" placeholder="01xxxxxxxxx">
+          </div>
+          <div class="field">
+            <label>العنوان</label>
+            <input type="text" name="address" placeholder="اختياري">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">إضافة العميل</button>
+      </form>
+    </div>
+
+    <div class="content-card">
+      <div class="card-header">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+        </div>
+        <h3 class="card-title">لمحة سريعة</h3>
+      </div>
+      <p class="card-text">
+        يوجد {{ customers|length }} عميل مسجّل في النظام. العملاء الذين لديهم قسط نشط
+        يظهر بجانب اسمهم المبلغ المستحق — افتح صفحة العميل لتسجيل دفعة أو مراجعة الضمانات المسجّلة له.
+      </p>
+    </div>
+  </div>
+
+  <div class="content-card">
+    <div class="search-box" id="customers-search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="text" id="customers-search-input" placeholder="ابحث بالاسم أو رقم الهاتف…" autocomplete="off">
+      <div class="clear-btn">&times;</div>
+    </div>
+    {% if customers %}<div class="search-hint">يعرض <strong>{{ customers|length }}</strong> عميل — النتائج تُفلتر أثناء الكتابة.</div>{% endif %}
+  </div>
+
+  <div class="content-card">
+    {% if customers %}
+    <table>
+      <thead><tr><th>الاسم</th><th>الهاتف</th><th>المبلغ المستحق</th><th></th></tr></thead>
+      <tbody id="customers-table-body">
+        {% for c in customers %}
+        <tr data-search="{{ c.name }} {{ c.phone|default:'' }}">
+          <td>{{ c.name }}</td>
+          <td class="mono" style="color:var(--text-faint);">{{ c.phone|default:"—" }}</td>
+          <td class="mono">
+            {% if c.total_due > 0 %}
+              <span class="badge badge-bad">{{ c.total_due|floatformat:2 }} ج.م</span>
+            {% else %}
+              <span class="badge badge-good">مسدد بالكامل</span>
+            {% endif %}
+          </td>
+          <td style="white-space:nowrap;">
+            <a href="{% url 'pos:customer_detail' customer_id=c.id %}" class="btn btn-sm">عرض</a>
+            <form method="post" action="{% url 'pos:customer_delete' customer_id=c.id %}" style="display:inline;" data-confirm="حذف العميل {{ c.name }}؟ لا يمكن التراجع عن هذا الإجراء." data-confirm-label="حذف">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-danger">حذف</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="empty" id="customers-empty" style="display:none;">لا يوجد عميل مطابق لبحثك.</div>
+    {% else %}
+    <div class="empty">لا يوجد عملاء مسجّلون بعد.</div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'pos/js/list-search.js' %}"></script>
+<script>
+  initLiveSearch({
+    inputId: "customers-search-input",
+    rowSelector: "#customers-table-body tr",
+    emptyId: "customers-empty",
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,198 @@
+{% extends "pos/base.html" %}
+{% block title %}{{ investor.name }} · إلكترو POS{% endblock %}
+{% block content %}
+
+<div class="panel-header">
+  <div>
+    <span class="panel-badge">ملف مستثمر</span>
+    <h1 class="panel-title">{{ investor.name }}</h1>
+    <p class="panel-description">رأس المال، نسبة الملكية، وسجل كل حركة مالية لهذا المستثمر.</p>
+  </div>
+  <div style="text-align:end;">
+    <div style="display:flex; gap:10px;">
+      <a href="{% url 'pos:investors_list' %}" class="btn">→ كل المستثمرين</a>
+      <form method="post" action="{% url 'pos:investor_delete' investor_id=investor.id %}" data-confirm="حذف المستثمر {{ investor.name }} نهائياً؟ لا يمكن التراجع عن هذا الإجراء." data-confirm-label="حذف">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">حذف المستثمر</button>
+      </form>
+    </div>
+    {% if investor.current_capital > 0 or investor.dividends_due > 0 %}
+    <div class="hint" style="margin-top:6px;">
+      لا يمكن الحذف قبل سحب رأس المال المتبقي{% if investor.dividends_due > 0 %} ودفع الأرباح المستحقة{% endif %} بالكامل.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="panel-content">
+
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-value">{{ investor.current_capital|floatformat:2 }}</div>
+      <div class="stat-label">رأس المال الحالي</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value plain">{{ investor.ownership_percentage|floatformat:1 }}٪</div>
+      <div class="stat-label">نسبة الملكية</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" style="-webkit-text-fill-color: var(--good); background:none;">{{ investor.total_profit_earned|floatformat:2 }}</div>
+      <div class="stat-label">إجمالي الأرباح</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value danger">{{ investor.total_loss_borne|floatformat:2 }}</div>
+      <div class="stat-label">إجمالي الخسائر المتحملة</div>
+    </div>
+  </div>
+
+  <div class="content-card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+      <div>
+        <div class="card-title" style="margin-bottom:4px;">الأرباح المستحقة غير المدفوعة</div>
+        <div style="font-family:var(--font-mono); direction:ltr; display:inline-block; font-size:26px; font-weight:800; color:{% if investor.dividends_due > 0 %}var(--accent-1){% else %}var(--text-dim){% endif %};">
+          {{ investor.dividends_due|floatformat:2 }} <span style="font-family:var(--font-body); direction:rtl; font-size:14px; color:var(--text-faint);">جنيه</span>
+        </div>
+        {% if investor.next_dividend_due_date %}
+        <div style="margin-top:8px;">
+          {% if investor.days_until_dividend_due < 0 %}
+            <span class="badge badge-bad">الدفعة القادمة متأخرة {{ investor.days_until_dividend_due|cut:"-" }} يوم</span>
+          {% elif investor.days_until_dividend_due == 0 %}
+            <span class="badge badge-bad">الدفعة القادمة مستحقة اليوم</span>
+          {% elif investor.days_until_dividend_due <= 5 %}
+            <span class="badge badge-accent">الدفعة القادمة خلال {{ investor.days_until_dividend_due }} يوم</span>
+          {% else %}
+            <span class="badge badge-dim">الدفعة القادمة في {{ investor.next_dividend_due_date|date:"Y-m-d" }}</span>
+          {% endif %}
+        </div>
+        {% endif %}
+        {% if investor.last_dividend_payment_date %}
+        <div class="hint" style="margin-top:6px;">آخر دفعة أرباح: {{ investor.last_dividend_payment_date|date:"Y-m-d" }}</div>
+        {% endif %}
+      </div>
+      {% if investor.dividends_due > 0 %}
+      <form method="post" action="{% url 'pos:investor_pay_dividend' investor_id=investor.id %}" data-confirm="دفع كامل الأرباح المستحقة ({{ investor.dividends_due|floatformat:2 }} جنيه) لـ {{ investor.name }}؟" data-confirm-tone="info" data-confirm-label="تأكيد الدفع">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-good">دفع الأرباح المستحقة بالكامل</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="stats-grid cols-3">
+    <div class="content-card">
+      <div class="card-title" style="margin-bottom:12px;">إضافة استثمار</div>
+      <form method="post" action="{% url 'pos:investor_add_capital' investor_id=investor.id %}">
+        {% csrf_token %}
+        <div class="field">
+          <label>المبلغ (جنيه)</label>
+          <input type="number" step="0.01" min="0.01" name="amount" required>
+        </div>
+        <div class="field">
+          <label>ملاحظة</label>
+          <input type="text" name="note" placeholder="اختياري">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">إضافة</button>
+      </form>
+    </div>
+
+    <div class="content-card">
+      <div class="card-title" style="margin-bottom:12px;">سحب من رأس المال</div>
+      <form method="post" action="{% url 'pos:investor_withdraw' investor_id=investor.id %}" data-confirm="تأكيد سحب هذا المبلغ من رأس مال {{ investor.name }}؟" data-confirm-label="تأكيد السحب">
+        {% csrf_token %}
+        <div class="field">
+          <label>المبلغ (جنيه)</label>
+          <input type="number" step="0.01" min="0.01" max="{{ investor.current_capital }}" name="amount" required>
+        </div>
+        <div class="field">
+          <label>ملاحظة</label>
+          <input type="text" name="note" placeholder="اختياري">
+        </div>
+        <button type="submit" class="btn btn-danger btn-block">سحب</button>
+      </form>
+    </div>
+
+    <div class="content-card">
+      <div class="card-title" style="margin-bottom:12px;">تعديل بيانات المستثمر</div>
+      <form method="post" action="{% url 'pos:investor_edit' investor_id=investor.id %}">
+        {% csrf_token %}
+        <div class="field">
+          <label>الاسم</label>
+          <input type="text" name="name" value="{{ investor.name }}" required>
+        </div>
+        <div class="field">
+          <label>الهاتف</label>
+          <input type="text" name="phone" value="{{ investor.phone }}">
+        </div>
+        <div class="field">
+          <label>طريقة توزيع الأرباح</label>
+          <select name="distribution_method">
+            <option value="monthly" {% if investor.distribution_method == 'monthly' %}selected{% endif %}>شهري</option>
+            <option value="quarterly" {% if investor.distribution_method == 'quarterly' %}selected{% endif %}>كل 3 أشهر</option>
+            <option value="semi_annual" {% if investor.distribution_method == 'semi_annual' %}selected{% endif %}>كل 6 أشهر</option>
+            <option value="annual" {% if investor.distribution_method == 'annual' %}selected{% endif %}>سنوي</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>الحالة</label>
+          <select name="status">
+            <option value="active" {% if investor.status == 'active' %}selected{% endif %}>نشط</option>
+            <option value="withdrawn" {% if investor.status == 'withdrawn' %}selected{% endif %}>منسحب</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-block">حفظ التعديلات</button>
+      </form>
+    </div>
+  </div>
+
+  <h3 style="margin: 8px 0 4px;">سجل الحركات المالية</h3>
+  <div class="content-card">
+    {% if transactions %}
+    <table>
+      <thead><tr><th>التاريخ</th><th>النوع</th><th>المبلغ</th><th>الرصيد بعدها</th><th>ملاحظة</th></tr></thead>
+      <tbody>
+        {% for t in transactions %}
+        <tr>
+          <td class="mono" style="color:var(--text-faint);">{{ t.date|date:"Y-m-d H:i" }}</td>
+          <td>
+            {% if t.type == 'investment' or t.type == 'addition' %}<span class="badge badge-good">{{ t.get_type_display }}</span>
+            {% elif t.type == 'withdrawal' %}<span class="badge badge-bad">{{ t.get_type_display }}</span>
+            {% elif t.type == 'profit' %}<span class="badge badge-accent">{{ t.get_type_display }}</span>
+            {% elif t.type == 'loss' %}<span class="badge badge-bad">{{ t.get_type_display }}</span>
+            {% else %}<span class="badge badge-info">{{ t.get_type_display }}</span>{% endif %}
+          </td>
+          <td class="mono">{{ t.amount|floatformat:2 }}</td>
+          <td class="mono" style="color:var(--text-faint);">{{ t.balance_after|floatformat:2 }}</td>
+          <td>{{ t.note|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">لا توجد حركات مسجّلة بعد.</div>
+    {% endif %}
+  </div>
+
+  <h3 style="margin: 26px 0 4px;">سجل توزيعات الأرباح</h3>
+  <div class="content-card">
+    {% if shares %}
+    <table>
+      <thead><tr><th>الفترة</th><th>نسبة الملكية وقتها</th><th>النصيب</th><th></th></tr></thead>
+      <tbody>
+        {% for s in shares %}
+        <tr>
+          <td class="mono" style="color:var(--text-faint);">{{ s.distribution.period_start|date:"Y-m-d" }} → {{ s.distribution.period_end|date:"Y-m-d" }}</td>
+          <td class="mono">{{ s.ownership_percentage_snapshot|floatformat:1 }}٪</td>
+          <td class="mono" style="color:{% if s.share_amount >= 0 %}var(--good){% else %}var(--bad){% endif %};">{{ s.share_amount|floatformat:2 }}</td>
+          <td><a href="{% url 'pos:distribution_detail' distribution_id=s.distribution.id %}" class="btn btn-sm">عرض التوزيع</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">لم يشارك هذا المستثمر في أي توزيع أرباح بعد.</div>
+    {% endif %}
+  </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "pos/base.html" %}
+{% block title %}توزيع أرباح جديد · إلكترو POS{% endblock %}
+{% block content %}
+
+<div class="panel-header">
+  <div>
+    <span class="panel-badge">توزيع جديد</span>
+    <h1 class="panel-title">توزيع أرباح جديد</h1>
+    <p class="panel-description">اختر فترة زمنية، عاين صافي الربح أو الخسارة المحسوب تلقائياً، ثم أكّد التوزيع على المستثمرين.</p>
+  </div>
+  <a href="{% url 'pos:distributions_list' %}" class="btn">→ كل التوزيعات</a>
+</div>
+
+<div class="panel-content">
+
+  <div class="content-card">
+    <form method="get">
+      <div class="field-row">
+        <div class="field">
+          <label>من تاريخ</label>
+          <input type="date" name="start" value="{{ period_start_str }}" required>
+        </div>
+        <div class="field">
+          <label>إلى تاريخ</label>
+          <input type="date" name="end" value="{{ period_end_str }}" required>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">معاينة الحساب</button>
+    </form>
+  </div>
+
+  {% if preview %}
+  <div class="content-card">
+    <h3 style="margin-bottom:14px;">حساب صافي الربح للفترة</h3>
+    <div class="rows-breakdown" style="display:flex; flex-direction:column; gap:0;">
+      <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border-soft);">
+        <span style="color:var(--text-dim);">إجمالي إيرادات المبيعات</span>
+        <span class="mono">{{ preview.total_revenue|floatformat:2 }}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border-soft);">
+        <span style="color:var(--text-dim);">ناقص: تكلفة البضاعة المباعة</span>
+        <span class="mono">-{{ preview.total_cogs|floatformat:2 }}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border-soft); font-weight:700;">
+        <span>= إجمالي الربح</span>
+        <span class="mono">{{ preview.gross_profit|floatformat:2 }}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border-soft);">
+        <span style="color:var(--text-dim);">ناقص: المصروفات التشغيلية</span>
+        <span class="mono">-{{ preview.total_expenses|floatformat:2 }}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:14px 0; font-size:20px; font-weight:800;">
+        <span>= صافي {% if preview.net_profit < 0 %}الخسارة{% else %}الربح{% endif %}</span>
+        <span class="mono" style="color:{% if preview.net_profit < 0 %}var(--bad){% else %}var(--good){% endif %};">{{ preview.net_profit|floatformat:2 }}</span>
+      </div>
+    </div>
+  </div>
+
+  {% if not preview.has_investors %}
+  <div class="content-card"><div class="empty">لا يوجد مستثمرون نشطون حالياً لتوزيع الأرباح عليهم.</div></div>
+  {% else %}
+
+  <div class="content-card">
+    <h3 style="margin-bottom:14px;">توزيع تقديري حسب نسبة الملكية الحالية</h3>
+    <table>
+      <thead><tr><th>المستثمر</th><th>نسبة الملكية</th><th>النصيب التقديري</th></tr></thead>
+      <tbody>
+        {% for b in preview.breakdown %}
+        <tr>
+          <td>{{ b.investor.name }}</td>
+          <td class="mono">{{ b.pct|floatformat:1 }}٪</td>
+          <td class="mono" style="color:{% if b.share >= 0 %}var(--good){% else %}var(--bad){% endif %};">{{ b.share|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="content-card">
+    <form method="post" data-confirm="تأكيد إنشاء هذا التوزيع؟ لا يمكن التراجع عنه لاحقاً." data-confirm-tone="info" data-confirm-label="تأكيد التوزيع">
+      {% csrf_token %}
+      <input type="hidden" name="period_start" value="{{ preview.period_start }}">
+      <input type="hidden" name="period_end" value="{{ preview.period_end }}">
+
+      {% if preview.net_profit < 0 %}
+      <div class="field">
+        <label>سياسة تحمّل الخسارة</label>
+        <select name="loss_policy" required>
+          <option value="deduct_from_capital">تُخصم من رأس مال كل مستثمر</option>
+          <option value="record_only">تُسجَّل فقط دون خصم (تُعوَّض من أرباح لاحقة)</option>
+          <option value="owner_bears">يتحملها صاحب المشروع بالكامل، ولا تؤثر على المستثمرين</option>
+        </select>
+        <div class="hint">هذا الاختيار يحدد كيف تُطبَّق الخسارة على كل مستثمر — راجع العقد المتفق عليه.</div>
+      </div>
+      {% endif %}
+
+      <div class="field">
+        <label>ملاحظة (اختياري)</label>
+        <input type="text" name="note" placeholder="مثال: توزيع شهر يوليو">
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">
+        تأكيد التوزيع على المستثمرين
+      </button>
+    </form>
+  </div>
+  {% endif %}
+  {% endif %}
+
+</div>
+
+{% endblock %}
